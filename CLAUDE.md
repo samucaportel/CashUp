@@ -4,11 +4,39 @@
 Serviço Python que sincroniza dados do ERP Oracle para o CRM CashUp via REST API.
 Roda como um processo único que combina um dashboard FastAPI (porta 8000) com um agendador APScheduler.
 
+## Instalação no servidor
+```bash
+# 1. Clonar o repositório
+git clone https://github.com/samucaportel/CashUp.git
+cd CashUp
+
+# 2. Criar e ativar ambiente virtual
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
+
+# 3. Instalar dependências
+pip install -r requirements.txt
+
+# 4. Configurar ambiente
+copy .env.example .env       # Windows
+# cp .env.example .env       # Linux/Mac
+# Editar .env com as credenciais do ambiente
+```
+
 ## Como rodar
 ```bash
+venv\Scripts\activate   # ativar o ambiente virtual antes
 python run.py
 ```
 Requer o arquivo `.env` configurado (copiar de `.env.example`).
+
+## Atualizações futuras
+```bash
+git pull
+pip install -r requirements.txt   # somente se houver novos pacotes
+python run.py
+```
 
 ## Variáveis de ambiente (.env)
 | Variável | Descrição |
