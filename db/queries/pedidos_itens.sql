@@ -1,0 +1,5 @@
+-- View: VW_CASHUP_PEDIDOS_ITENS
+-- Campos seguem nomenclatura da API CashUp (itens)
+SELECT * FROM VW_CASHUP_PEDIDOS_ITENS
+WHERE NUMERO_PEDIDO IN (:pedido_numbers)
+ORDER BY NUMERO_PEDIDO, COD_FILIAL, SEQ

@@ -1,0 +1,28 @@
+# Credenciais e configuração local
+.env
+
+# Logs e resultados de sync
+logs/
+
+# Arquivos de debug
+debug_*.json
+debug_*.log
+startup_error.txt
+test_out*.txt
+test_db_out.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/

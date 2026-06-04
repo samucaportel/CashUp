@@ -1,0 +1,5 @@
+-- View: VW_CASHUP_FICHAS_FINANCEIRAS
+-- Campos seguem nomenclatura da API CashUp
+SELECT * FROM VW_CASHUP_FICHAS_FINANCEIRAS
+
+WHERE ID_SINC > :ultimo_id

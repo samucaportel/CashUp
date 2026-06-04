@@ -1,0 +1,5 @@
+-- View: VW_CASHUP_EQUIPES_COMERCIAIS
+-- Campos seguem nomenclatura da API CashUp
+SELECT * FROM VW_CASHUP_EQUIPES_COMERCIAIS
+
+WHERE ID_SINC > :ultimo_id

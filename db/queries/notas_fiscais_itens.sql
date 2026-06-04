@@ -1,0 +1,5 @@
+-- View: VW_CASHUP_NOTAS_FISCAIS_ITENS
+-- Campos seguem nomenclatura da API CashUp (itens)
+SELECT * FROM VW_CASHUP_NOTAS_FISCAIS_ITENS
+WHERE NUMERO_NF IN (:nf_numbers)
+ORDER BY NUMERO_NF, SERIE_NF, SEQ

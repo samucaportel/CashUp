@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashUp API — Dashboard</title>
+    <meta name="description" content="Painel de monitoramento e controle da integração ERP ↔ CashUp CRM">
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='%23393939'/><text x='3.5' y='12' font-size='12' font-weight='bold' font-family='sans-serif' fill='%23f4f4f4'>C</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div>
+                <h1 style="color: #f60;">CashUp API</h1>
+                <div class="header-subtitle">Sincronização Portel ERP - CashUp CRM</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="health-badge">
+                <div class="health-dot" id="healthDot"></div>
+                <span id="healthText">Verificando...</span>
+            </div>
+            <button class="btn-sync-all" id="btnSyncAll" onclick="triggerSyncAll()">
+                ⟳ Sincronizar Tudo
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Total Entidades</div>
+                <div class="stat-value blue" id="statTotal">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Sincronizadas</div>
+                <div class="stat-value green" id="statSuccess">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Com Erros</div>
+                <div class="stat-value red" id="statErrors">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Nunca Executadas</div>
+                <div class="stat-value yellow" id="statNever">—</div>
+            </div>
+        </div>
+
+        <!-- Visão Gráfica -->
+        <div class="chart-container glass-panel" style="margin-bottom: 32px;">
+            <canvas id="syncChart"></canvas>
+        </div>
+
+        <!-- Entities Section -->
+        <h2 class="section-title">Entidades de Sincronização</h2>
+        <div class="entities-grid" id="entitiesGrid">
+            <!-- Cards gerados via JS -->
+        </div>
+
+        <!-- Log Panel -->
+        <h2 class="section-title">Log de Atividades</h2>
+        <div class="log-panel">
+            <div class="log-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20" style="vertical-align: middle; margin-right: 4px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                    </svg>
+                    Registro de Eventos
+                </h3>
+                <button class="btn-clear-log" onclick="clearLog()">Limpar</button>
+            </div>
+            <div class="log-content" id="logContent">
+                <div class="log-entry">
+                    <span class="log-time">—</span>
+                    <span class="log-info">Dashboard inicializado. Aguardando dados...</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js?v=3"></script>
+</body>
+</html>
