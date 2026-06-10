@@ -111,7 +111,7 @@ class SyncPedidosEnvio(BaseSyncService):
 
         try:
             # 1. Pega watermark de ID_SINC (prioriza o que vem via kwargs se existir)
-            ultimo_db = self.get_ultimo_id_sinc()
+            ultimo_db = 0 if kwargs.get("force") else self.get_ultimo_id_sinc()
             ultimo_id = kwargs.get("ultimo_id", ultimo_db)
             query_params = {**kwargs, "ultimo_id": ultimo_id}
 
