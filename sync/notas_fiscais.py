@@ -128,12 +128,21 @@ class SyncNotasFiscais(BaseSyncService):
 
         try:
             # 1. Pega watermark de ID_SINC (prioriza o que vem via kwargs se existir)
-            ultimo_db = 0 if kwargs.get("force") else self.get_ultimo_id_sinc()
+            # Filtro de período (ajuste temporário para testes): ignora o watermark
+            # e não atualiza o ID_SINC, retornando apenas NFs no intervalo informado.
+            dt_inicio = kwargs.get("dt_inicio")
+            dt_fim = kwargs.get("dt_fim")
+            periodo_filtro = bool(dt_inicio or dt_fim)
+
+            ultimo_db = 0 if (kwargs.get("force") or periodo_filtro) else self.get_ultimo_id_sinc()
             ultimo_id = kwargs.get("ultimo_id", ultimo_db)
             query_params = {**kwargs, "ultimo_id": ultimo_id}
 
             # 2. Busca todos os cabeçalhos pendentes
             sql_header, params_header = self.get_query(**query_params)
+            sql_header, params_header = self._apply_period_filter(
+                sql_header, params_header, "DT_EMIS", dt_inicio, dt_fim
+            )
             headers = self.db.execute_query(sql_header, params_header)
             result.total_records = len(headers)
 
@@ -190,8 +199,8 @@ class SyncNotasFiscais(BaseSyncService):
                             result.error_records += br["count"]
                             result.errors.append(br.get("error", "API Error"))
 
-            # 4. Atualiza watermark (maior ID_SINC do lote todo)
-            if headers:
+            # 4. Atualiza watermark (maior ID_SINC do lote todo; não atualiza com filtro de período)
+            if headers and not periodo_filtro:
                 max_id_sinc = max((int(h.get("ID_SINC", 0) or 0) for h in headers), default=0)
                 if max_id_sinc > ultimo_id:
                     self.update_ultimo_id_sinc(max_id_sinc)

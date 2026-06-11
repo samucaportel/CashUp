@@ -65,14 +65,16 @@ async def api_status():
 
 
 @app.post("/api/sync/{entity}")
-async def trigger_sync(entity: str, force: bool = False):
+async def trigger_sync(entity: str, force: bool = False, dt_inicio: str | None = None, dt_fim: str | None = None):
     """Dispara sincronização manual de uma entidade.
     Query param ?force=true ignora o ID_SINC e sincroniza tudo.
+    Query params ?dt_inicio=YYYY-MM-DD&dt_fim=YYYY-MM-DD filtram por período
+    (ajuste temporário para testes; suportado apenas por pedidos_envio e notas_fiscais).
     """
     if entity == "all":
         results = {}
         for ent in get_available_entities():
-            results[ent] = run_sync_manual(ent, force=force)
+            results[ent] = run_sync_manual(ent, force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
         return JSONResponse(content={"results": results})
 
     if entity not in get_available_entities():
@@ -81,7 +83,7 @@ async def trigger_sync(entity: str, force: bool = False):
             content={"error": f"Entidade desconhecida: {entity}"},
         )
 
-    result = run_sync_manual(entity, force=force)
+    result = run_sync_manual(entity, force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
     return JSONResponse(content={"result": result})
 
 

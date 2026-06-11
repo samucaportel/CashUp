@@ -28,8 +28,12 @@ def _get_db_connector() -> DatabaseConnector:
     raise ValueError(f"DB_TYPE não suportado: {settings.DB_TYPE}")
 
 
-def _run_sync(entity_name: str, force: bool = False):
-    """Executa a sincronização de uma entidade específica."""
+def _run_sync(entity_name: str, force: bool = False, dt_inicio: str | None = None, dt_fim: str | None = None):
+    """Executa a sincronização de uma entidade específica.
+
+    dt_inicio/dt_fim: filtro de período (ajuste temporário para testes),
+    suportado apenas por pedidos_envio e notas_fiscais.
+    """
     from sync.clientes import SyncClientes
     from sync.produtos import SyncProdutos
     from sync.estoque import SyncEstoque
@@ -73,7 +77,7 @@ def _run_sync(entity_name: str, force: bool = False):
         with db:
             sync_class = SYNC_MAP[entity_name]
             service = sync_class(db, api)
-            result = service.execute(force=force)
+            result = service.execute(force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
             result = result.to_dict()
 
             # Salva no histórico
@@ -96,9 +100,9 @@ def _run_sync(entity_name: str, force: bool = False):
         sync_history[entity_name].insert(0, error_result)
 
 
-def run_sync_manual(entity_name: str, force: bool = False) -> dict:
+def run_sync_manual(entity_name: str, force: bool = False, dt_inicio: str | None = None, dt_fim: str | None = None) -> dict:
     """Executa sync manualmente e retorna resultado."""
-    _run_sync(entity_name, force=force)
+    _run_sync(entity_name, force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
     if entity_name in sync_history and sync_history[entity_name]:
         return sync_history[entity_name][0]
     return {"entity": entity_name, "status": "unknown"}

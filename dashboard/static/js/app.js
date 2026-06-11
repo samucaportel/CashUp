@@ -35,6 +35,10 @@ const ENTITY_LABELS = {
     titulos_financeiros: 'Títulos Financeiros',
 };
 
+// Entidades com filtro de período habilitado (ajuste temporário para testes)
+const PERIOD_FILTER_ENTITIES = ['pedidos_envio', 'notas_fiscais'];
+const periodFilterValues = {}; // { entity: { dt_inicio, dt_fim } }
+
 let refreshInterval = null;
 
 // ─── Initialization ───────────────────────────────────
@@ -118,6 +122,62 @@ async function triggerSync(entity, force = false) {
     }
 }
 
+function updatePeriodFilterValue(entity, field, value) {
+    if (!periodFilterValues[entity]) periodFilterValues[entity] = {};
+    periodFilterValues[entity][field] = value;
+}
+
+async function triggerSyncPeriodo(entity) {
+    const pf = periodFilterValues[entity] || {};
+    const dtInicio = pf.dt_inicio || '';
+    const dtFim = pf.dt_fim || '';
+
+    if (!dtInicio && !dtFim) {
+        showToast('error', 'Selecione ao menos uma data para o filtro de período');
+        return;
+    }
+
+    if (!confirm(`Sincronizar "${ENTITY_LABELS[entity] || entity}" apenas com registros entre ${dtInicio || '...'} e ${dtFim || '...'}?\n\nEste filtro não atualiza o controle de ID_SINC (ajuste temporário para testes).`)) return;
+
+    const btn = document.querySelector(`[data-entity="${entity}"] .btn-entity-sync`);
+    const btnForce = document.querySelector(`[data-entity="${entity}"] .btn-entity-force`);
+    const btnPeriodo = document.querySelector(`[data-entity="${entity}"] .btn-entity-period`);
+    if (btn) btn.disabled = true;
+    if (btnForce) btnForce.disabled = true;
+    if (btnPeriodo) { btnPeriodo.disabled = true; btnPeriodo.innerHTML = '<span class="spinner"></span> Sincronizando...'; }
+
+    addLog('info', `Sincronizando período (${dtInicio || '...'} a ${dtFim || '...'}): ${ENTITY_LABELS[entity] || entity}`);
+
+    try {
+        const params = new URLSearchParams();
+        if (dtInicio) params.set('dt_inicio', dtInicio);
+        if (dtFim) params.set('dt_fim', dtFim);
+        const resp = await fetch(`/api/sync/${entity}?${params.toString()}`, { method: 'POST' });
+        const data = await resp.json();
+
+        if (data.result) {
+            const r = data.result;
+            if (r.status === 'success') {
+                addLog('success', `✓ ${ENTITY_LABELS[entity]}: ${r.sent_records || 0} registros sincronizados (período)`);
+                showToast('success', `${ENTITY_LABELS[entity]}: período sincronizado!`);
+            } else if (r.status === 'partial') {
+                addLog('warning', `⚠ ${ENTITY_LABELS[entity]}: parcial — ${r.sent_records} ok, ${r.error_records} erros`);
+                showToast('error', `${ENTITY_LABELS[entity]}: sync parcial com erros`);
+            } else {
+                addLog('error', `✗ ${ENTITY_LABELS[entity]}: ${r.errors?.[0] || 'Erro desconhecido'}`);
+                showToast('error', `${ENTITY_LABELS[entity]}: falha na sincronização`);
+            }
+        }
+    } catch (err) {
+        addLog('error', `✗ ${ENTITY_LABELS[entity]}: ${err.message}`);
+        showToast('error', `Erro ao sincronizar ${ENTITY_LABELS[entity]}`);
+    } finally {
+        if (btn) btn.disabled = false;
+        if (btnForce) btnForce.disabled = false;
+        loadStatus();
+    }
+}
+
 async function triggerSyncAll() {
     const btn = document.getElementById('btnSyncAll');
     btn.disabled = true;
@@ -175,6 +235,19 @@ function createEntityCard(entity, info) {
     const errorRecords = info.last_sync?.error_records ?? 0;
     const totalExec = info.total_executions || 0;
 
+    const pf = periodFilterValues[entity] || {};
+    const periodFilterHtml = PERIOD_FILTER_ENTITIES.includes(entity) ? `
+        <div class="entity-period-filter">
+            <input type="date" class="input-period" value="${pf.dt_inicio || ''}" onchange="updatePeriodFilterValue('${entity}', 'dt_inicio', this.value)" title="Data início">
+            <span class="period-sep">até</span>
+            <input type="date" class="input-period" value="${pf.dt_fim || ''}" onchange="updatePeriodFilterValue('${entity}', 'dt_fim', this.value)" title="Data fim">
+            <button class="btn-entity-period" onclick="triggerSyncPeriodo('${entity}')" title="Sincroniza apenas os registros do período (não atualiza o controle de ID_SINC — ajuste temporário para testes)">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                Período
+            </button>
+        </div>
+    ` : '';
+
     card.innerHTML = `
         <div class="entity-header">
             <div>
@@ -219,6 +292,7 @@ function createEntityCard(entity, info) {
                 </svg>
             </button>
         </div>
+        ${periodFilterHtml}
     `;
 
     return card;

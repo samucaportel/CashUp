@@ -92,6 +92,22 @@ class BaseSyncService(ABC):
                 
         return sql, filtered_params
 
+    def _apply_period_filter(
+        self, sql: str, params: dict, column: str, dt_inicio: str | None, dt_fim: str | None
+    ) -> tuple[str, dict]:
+        """Adiciona filtro opcional de período (ajuste temporário para testes).
+
+        dt_inicio/dt_fim no formato 'YYYY-MM-DD'. Quando informados, filtra a
+        query pela coluna de data indicada.
+        """
+        if dt_inicio:
+            sql += f"\nAND {column} >= TO_DATE(:dt_inicio, 'YYYY-MM-DD')"
+            params["dt_inicio"] = dt_inicio
+        if dt_fim:
+            sql += f"\nAND {column} < TO_DATE(:dt_fim, 'YYYY-MM-DD') + 1"
+            params["dt_fim"] = dt_fim
+        return sql, params
+
     @abstractmethod
     def transform(self, row: dict[str, Any]) -> dict[str, Any]:
         """Transforma uma linha do banco para o formato JSON do CashUp."""

@@ -422,6 +422,55 @@ body {
     cursor: not-allowed;
 }
 
+.entity-period-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+
+.input-period {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.period-sep {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.btn-entity-period {
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.btn-entity-period:hover {
+    background: var(--accent-blue);
+    color: white;
+}
+
+.btn-entity-period:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .btn-entity-history {
     padding: 8px 12px;
     background: transparent;
