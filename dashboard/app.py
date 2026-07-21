@@ -116,6 +116,7 @@ _CRM_ENDPOINTS: dict[str, str] = {
     "produtos_clientes":  Endpoints.PRODUTOS_CLIENTES,
     "notas_fiscais":      Endpoints.NOTAS_FISCAIS,
     "pedidos_envio":      Endpoints.PEDIDOS,
+    "titulos_financeiros": Endpoints.TITULOS_FINANCEIROS,
 }
 
 
