@@ -3,6 +3,7 @@ Agendador de jobs de sincronização com APScheduler.
 """
 
 import logging
+import threading
 from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -18,14 +19,40 @@ logger = logging.getLogger("cashup.scheduler")
 sync_history: dict[str, list[dict]] = {}
 MAX_HISTORY = 50
 
+# Conector de banco compartilhado (singleton). O pool Oracle é criado uma única
+# vez e reutilizado por todos os jobs, em vez de recriado a cada execução.
+_db_connector: DatabaseConnector | None = None
+_db_lock = threading.Lock()
 
-def _get_db_connector() -> DatabaseConnector:
+
+def _create_db_connector() -> DatabaseConnector:
     """Factory para obter o conector de banco correto."""
     if settings.DB_TYPE == "oracle":
         from db.oracle import OracleConnector
         return OracleConnector()
     # Futuramente: firebird, sqlserver
     raise ValueError(f"DB_TYPE não suportado: {settings.DB_TYPE}")
+
+
+def get_db_connector() -> DatabaseConnector:
+    """Retorna o conector compartilhado, criando o pool sob demanda (thread-safe)."""
+    global _db_connector
+    if _db_connector is None:
+        with _db_lock:
+            if _db_connector is None:
+                conn = _create_db_connector()
+                conn.connect()
+                _db_connector = conn
+    return _db_connector
+
+
+def shutdown_db() -> None:
+    """Fecha o pool compartilhado (chamado no encerramento da aplicação)."""
+    global _db_connector
+    with _db_lock:
+        if _db_connector is not None:
+            _db_connector.disconnect()
+            _db_connector = None
 
 
 def _run_sync(entity_name: str, force: bool = False, dt_inicio: str | None = None, dt_fim: str | None = None):
@@ -71,20 +98,19 @@ def _run_sync(entity_name: str, force: bool = False, dt_inicio: str | None = Non
     logger.info("-> Job agendado executando: %s", entity_name)
 
     try:
-        db = _get_db_connector()
+        db = get_db_connector()  # pool compartilhado, não fecha ao fim do job
         api = CashUpClient()
 
-        with db:
-            sync_class = SYNC_MAP[entity_name]
-            service = sync_class(db, api)
-            result = service.execute(force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
-            result = result.to_dict()
+        sync_class = SYNC_MAP[entity_name]
+        service = sync_class(db, api)
+        result = service.execute(force=force, dt_inicio=dt_inicio, dt_fim=dt_fim)
+        result = result.to_dict()
 
-            # Salva no histórico
-            if entity_name not in sync_history:
-                sync_history[entity_name] = []
-            sync_history[entity_name].insert(0, result)
-            sync_history[entity_name] = sync_history[entity_name][:MAX_HISTORY]
+        # Salva no histórico
+        if entity_name not in sync_history:
+            sync_history[entity_name] = []
+        sync_history[entity_name].insert(0, result)
+        sync_history[entity_name] = sync_history[entity_name][:MAX_HISTORY]
 
     except Exception as e:
         logger.error("Job %s falhou: %s", entity_name, e)
@@ -131,17 +157,25 @@ def create_scheduler() -> BackgroundScheduler:
     """Cria e configura o scheduler com todos os jobs."""
     scheduler = BackgroundScheduler()
 
-    interval_minutes = settings.SYNC_INTERVAL_MINUTES
-
     for entity in get_available_entities():
+        # Cada entidade tem seu próprio intervalo (camadas por volatilidade).
+        interval_minutes = settings.get_sync_interval(entity)
+
+        # Jitter espalha entidades que compartilham o mesmo intervalo para não
+        # baterem no banco ao mesmo tempo. Usa até ~1/4 do intervalo (máx 120s).
+        jitter_seconds = min(int(interval_minutes * 60 / 4), 120)
+
         scheduler.add_job(
             _run_sync,
-            trigger=IntervalTrigger(minutes=interval_minutes),
+            trigger=IntervalTrigger(minutes=interval_minutes, jitter=jitter_seconds),
             args=[entity],
             id=f"sync_{entity}",
             name=f"Sync {entity}",
             replace_existing=True,
         )
-        logger.info("Job agendado: sync_%s (a cada %d min)", entity, interval_minutes)
+        logger.info(
+            "Job agendado: sync_%s (a cada %d min, jitter até %ds)",
+            entity, interval_minutes, jitter_seconds,
+        )
 
     return scheduler

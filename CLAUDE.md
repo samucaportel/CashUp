@@ -49,7 +49,9 @@ python run.py
 | `DB_USER` / `DB_PASS` | Credenciais do banco |
 | `DB_SERVICE_NAME` | Service name Oracle |
 | `SYNC_BATCH_SIZE` | Registros por batch (padrão: 50) |
-| `SYNC_INTERVAL_MINUTES` | Intervalo do agendador (padrão: 30) |
+| `SYNC_INTERVAL_MINUTES` | Intervalo global padrão do agendador em minutos (fallback; padrão: 30) |
+| `SYNC_INTERVAL_<ENTIDADE>` | (Opcional) Intervalo específico de uma entidade, ex: `SYNC_INTERVAL_ESTOQUE=5`. Sobrescreve a camada padrão |
+| `SYNC_FULL_<ENTIDADE>` | (Opcional) `true` força carga total da entidade a cada ciclo, ignorando o `ID_SINC`, ex: `SYNC_FULL_ESTOQUE=true`. Padrão de código: `estoque` |
 | `DEBUG_SAVE_PAYLOADS` | `true` para gravar JSONs enviados em `logs/payloads/` |
 | `LOG_LEVEL` | Nível de log (padrão: `INFO`) |
 
@@ -74,9 +76,23 @@ dashboard/
   static/js/app.js      → Lógica do dashboard (labels, botões, gráficos)
 ```
 
+## Intervalos por entidade
+Cada entidade tem seu próprio intervalo de sync, em camadas por volatilidade do dado
+(definidas em `config/settings.py` → `SYNC_INTERVAL_DEFAULTS`):
+- **Rápida (5 min):** `estoque`
+- **Média (15 min):** `pedidos_envio`, `notas_fiscais`, `titulos_financeiros`, `fichas_financeiras`
+- **Lenta (60 min):** demais cadastros (`clientes`, `produtos`, etc.)
+
+Resolução do intervalo (`settings.get_sync_interval(entity)`): env `SYNC_INTERVAL_<ENTIDADE>` →
+camada padrão → `SYNC_INTERVAL_MINUTES` (fallback global). Cada job ainda recebe um *jitter*
+de até ~1/4 do intervalo (máx 120s) para desincronizar entidades de mesmo intervalo.
+
 ## Fluxo de sincronização
-1. APScheduler chama `_run_sync(entity)` a cada `SYNC_INTERVAL_MINUTES`
-2. Lê `ULTIMO_ID_SINC` da tabela `CASHUP_CONTROLE_SINC` (watermark)
+1. APScheduler chama `_run_sync(entity)` no intervalo da entidade (ver acima)
+2. Lê `ULTIMO_ID_SINC` da tabela `CASHUP_CONTROLE_SINC` (watermark). Entidades
+   full-sync (`settings.is_full_sync`, ex: `estoque`) ignoram o watermark e
+   carregam tudo a cada ciclo — a decisão é centralizada em
+   `BaseSyncService._resolve_ultimo_id()`
 3. Executa `SELECT * FROM VW_CASHUP_{ENTIDADE} WHERE ID_SINC > :ultimo_id`
 4. Transforma cada linha com `transform(row)`
 5. Envia em batches via `POST` para a API CashUp

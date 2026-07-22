@@ -60,8 +60,9 @@ class OracleConnector(DatabaseConnector):
                 password=settings.DB_PASS,
                 dsn=dsn,
                 min=1,
-                max=5,
+                max=10,
                 increment=1,
+                getmode=oracledb.POOL_GETMODE_WAIT,
             )
             logger.info("Pool Oracle criado com sucesso: %s@%s", settings.DB_USER, dsn)
         except Exception as e:

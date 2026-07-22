@@ -34,6 +34,52 @@ class Settings:
     SYNC_INTERVAL_MINUTES: int = int(os.getenv("SYNC_INTERVAL_MINUTES", "30"))
     DEBUG_SAVE_PAYLOADS: bool = os.getenv("DEBUG_SAVE_PAYLOADS", "false").lower() == "true"
 
+    # Intervalo de sync por entidade (minutos), em camadas por volatilidade do dado.
+    # Prioridade de resolução (ver get_sync_interval):
+    #   1. Env var SYNC_INTERVAL_<ENTIDADE>  (ex: SYNC_INTERVAL_ESTOQUE=5)
+    #   2. Padrão da camada abaixo
+    #   3. SYNC_INTERVAL_MINUTES (fallback global, ex: entidades novas)
+    SYNC_INTERVAL_DEFAULTS: dict[str, int] = {
+        # Camada rápida — dados voláteis
+        "estoque": 5,
+        # Camada média — movimentação
+        "pedidos_envio": 15,
+        "notas_fiscais": 15,
+        "titulos_financeiros": 15,
+        "fichas_financeiras": 15,
+        # Camada lenta — cadastros
+        "clientes": 60,
+        "produtos": 60,
+        "condicoes_pagto": 60,
+        "naturezas": 60,
+        "equipes_comerciais": 60,
+        "tabelas_preco": 60,
+        "transportadoras": 60,
+        "produtos_clientes": 60,
+    }
+
+    def get_sync_interval(self, entity: str) -> int:
+        """Resolve o intervalo (minutos) de uma entidade: env > camada > global."""
+        env_val = os.getenv(f"SYNC_INTERVAL_{entity.upper()}")
+        if env_val:
+            try:
+                return int(env_val)
+            except ValueError:
+                pass
+        return self.SYNC_INTERVAL_DEFAULTS.get(entity, self.SYNC_INTERVAL_MINUTES)
+
+    # Entidades que SEMPRE fazem carga total (ignoram o ID_SINC / watermark) a
+    # cada ciclo. Útil quando controlar registros alterados é inviável — ex:
+    # estoque. Pode ser sobrescrito por env: SYNC_FULL_<ENTIDADE>=true|false
+    SYNC_FULL_DEFAULTS: set[str] = {"estoque"}
+
+    def is_full_sync(self, entity: str) -> bool:
+        """Indica se a entidade sempre faz carga total (ignora o watermark)."""
+        env_val = os.getenv(f"SYNC_FULL_{entity.upper()}")
+        if env_val is not None:
+            return env_val.strip().lower() in ("1", "true", "yes", "on", "sim")
+        return entity in self.SYNC_FULL_DEFAULTS
+
     # Application
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))

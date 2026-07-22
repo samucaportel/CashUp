@@ -34,7 +34,7 @@ def main():
     """Função principal — inicia dashboard e scheduler."""
     import uvicorn
     from dashboard.app import app
-    from scheduler.jobs import create_scheduler
+    from scheduler.jobs import create_scheduler, shutdown_db
 
     # Valida configuração
     errors = settings.validate()
@@ -66,6 +66,7 @@ def main():
         logger.info("Encerrando...")
     finally:
         scheduler.shutdown(wait=False)
+        shutdown_db()
         logger.info("Scheduler encerrado")
 
 
