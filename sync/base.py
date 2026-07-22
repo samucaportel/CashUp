@@ -117,6 +117,23 @@ class BaseSyncService(ABC):
         """Hook para preparação antes do sync. Retorna params extras para a query."""
         return {}
 
+    def _resolve_ultimo_id(self, **kwargs) -> int:
+        """Determina o watermark inicial da rodada.
+
+        Retorna 0 (carga total, ignorando o ID_SINC) quando: `force`, a entidade
+        está marcada como full-sync (`settings.is_full_sync`) ou há filtro de
+        período (`dt_inicio`/`dt_fim`). Caso contrário, usa o ULTIMO_ID_SINC salvo.
+        """
+        if kwargs.get("force"):
+            logger.info("[%s] Modo forçado: ignorando ID_SINC, carga total", self.entity_name)
+            return 0
+        if settings.is_full_sync(self.entity_name):
+            logger.info("[%s] Full sync: entidade em carga total, ignorando ID_SINC", self.entity_name)
+            return 0
+        if kwargs.get("dt_inicio") or kwargs.get("dt_fim"):
+            return 0
+        return self.get_ultimo_id_sinc()
+
     def get_ultimo_id_sinc(self) -> int:
         """Busca o último ID_SINC sincronizado com sucesso para esta entidade."""
         sql = "SELECT ULTIMO_ID_SINC FROM CASHUP_CONTROLE_SINC WHERE ENTIDADE = :entity"
@@ -155,11 +172,8 @@ class BaseSyncService(ABC):
         logger.info("=== Iniciando sync: %s ===", self.entity_name)
 
         try:
-            # 1. Pega watermark de ID_SINC (force=True ignora e usa 0)
-            force = kwargs.get("force", False)
-            ultimo_id = 0 if force else self.get_ultimo_id_sinc()
-            if force:
-                logger.info("[%s] Modo forçado: ignorando ID_SINC, sincronizando tudo", self.entity_name)
+            # 1. Pega watermark de ID_SINC (force / full-sync / período usam 0)
+            ultimo_id = self._resolve_ultimo_id(**kwargs)
 
             # Preparação
             extra_params = self.pre_sync(**kwargs)

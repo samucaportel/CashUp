@@ -45,8 +45,7 @@ class SyncTitulosFinanceiros(BaseSyncService):
         logger.info("=== Iniciando sync: %s ===", self.entity_name)
 
         try:
-            ultimo_db = 0 if kwargs.get("force") else self.get_ultimo_id_sinc()
-            ultimo_id = kwargs.get("ultimo_id", ultimo_db)
+            ultimo_id = self._resolve_ultimo_id(**kwargs)
             query_params = {**kwargs, "ultimo_id": ultimo_id}
 
             sql, params = self.get_query(**query_params)

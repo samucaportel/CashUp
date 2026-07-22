@@ -134,8 +134,7 @@ class SyncNotasFiscais(BaseSyncService):
             dt_fim = kwargs.get("dt_fim")
             periodo_filtro = bool(dt_inicio or dt_fim)
 
-            ultimo_db = 0 if (kwargs.get("force") or periodo_filtro) else self.get_ultimo_id_sinc()
-            ultimo_id = kwargs.get("ultimo_id", ultimo_db)
+            ultimo_id = self._resolve_ultimo_id(**kwargs)
             query_params = {**kwargs, "ultimo_id": ultimo_id}
 
             # 2. Busca todos os cabeçalhos pendentes
