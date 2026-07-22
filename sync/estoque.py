@@ -43,8 +43,11 @@ class SyncEstoque(BaseSyncService):
             "DESCRICAO_LOTE": row.get("DESCRICAO_LOTE"),
             "DT_VALIDADE": row.get("DT_VALIDADE").isoformat()[:10] if row.get("DT_VALIDADE") else None,
             "DT_FABRICACAO": row.get("DT_FABRICACAO").isoformat()[:10] if row.get("DT_FABRICACAO") else None,
-            "QTD_FISICO": float(row.get("QTD_FISICO_LOTE") or 0),
-            "QTD_RESERVA": float(row.get("QTD_RESERVA_LOTE") or 0),
+            # A view entrega uma linha por lote; a quantidade do lote está em
+            # QTD_FISICO (não há coluna QTD_*_LOTE nesta view). DESCRICAO_LOTE,
+            # DT_VALIDADE, DT_FABRICACAO e QTD_RESERVA não têm coluna de origem.
+            "QTD_FISICO": float(row.get("QTD_FISICO") or 0),
+            "QTD_RESERVA": float(row.get("QTD_RESERVA") or 0),
         }
 
     def execute(self, **kwargs) -> SyncResult:
@@ -68,16 +71,24 @@ class SyncEstoque(BaseSyncService):
                 self._save_sync_result(result)
                 return result
 
-            # Agrupa por (COD_FILIAL, COD_PROD) — primeira linha fornece o cabeçalho
+            # Agrupa por (COD_FILIAL, COD_PROD). Cada linha da view é um lote:
+            # o cabeçalho (identidade/preços) vem da 1ª linha, e as quantidades
+            # do produto são SOMADAS entre os lotes.
+            AGG = ("QTD_FISICO", "QTD_FUTURO", "QTD_FATURAR", "SALDO_LOCAL")
             produtos: dict[str, dict] = {}
             for row in rows:
                 try:
                     key = f"{row.get('COD_FILIAL')}|{row.get('COD_PROD')}"
                     if key not in produtos:
                         produtos[key] = self.transform(row)
+                        for campo in AGG:
+                            produtos[key][campo] = 0.0  # zera para somar entre os lotes
+                    prod = produtos[key]
+                    for campo in AGG:
+                        prod[campo] += float(row.get(campo) or 0)
                     lote = self._transform_lote(row)
                     if lote:
-                        produtos[key]["LOTES"].append(lote)
+                        prod["LOTES"].append(lote)
                 except Exception as e:
                     result.error_records += 1
                     result.errors.append(f"Transform error: {e} | Row: {row}")
