@@ -68,10 +68,10 @@ class Settings:
                 pass
         return self.SYNC_INTERVAL_DEFAULTS.get(entity, self.SYNC_INTERVAL_MINUTES)
 
-    # Entidades que SEMPRE fazem carga total (ignoram o ID_SINC / watermark) a
-    # cada ciclo. Útil quando controlar registros alterados é inviável — ex:
-    # estoque. Pode ser sobrescrito por env: SYNC_FULL_<ENTIDADE>=true|false
-    SYNC_FULL_DEFAULTS: set[str] = {"estoque"}
+    # Entidades com carga total (full-sync) por padrão — ignoram o ID_SINC /
+    # watermark e carregam tudo a cada ciclo. Vazio por opção: o full-sync fica
+    # totalmente a cargo do .env (SYNC_FULL_<ENTIDADE>=true|false).
+    SYNC_FULL_DEFAULTS: set[str] = set()
 
     def is_full_sync(self, entity: str) -> bool:
         """Indica se a entidade sempre faz carga total (ignora o watermark)."""

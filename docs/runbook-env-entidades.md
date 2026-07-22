@@ -53,8 +53,9 @@ Valores aceitos como "ligado" em `SYNC_FULL_*`: `true`, `1`, `yes`, `on`, `sim`
 | 🟡 Média | `pedidos_envio`, `notas_fiscais`, `titulos_financeiros`, `fichas_financeiras` | 15 min |
 | 🟢 Lenta | demais cadastros (`clientes`, `produtos`, etc.) | 60 min |
 
-**Carga total (full-sync):** apenas `estoque` = ligado. Todas as outras usam o
-controle incremental por `ID_SINC`.
+**Carga total (full-sync):** nenhuma entidade vem ligada por padrão — todas usam
+o controle incremental por `ID_SINC`. Ligue via `.env` quando precisar
+(ex: `SYNC_FULL_ESTOQUE=true`).
 
 ---
 
@@ -67,7 +68,7 @@ controle incremental por `ID_SINC`.
 
 **Full-sync:**
 1. `SYNC_FULL_<ENTIDADE>` no `.env` (se definido — vale `true` **ou** `false`)
-2. Padrão do código (apenas `estoque` ligado)
+2. Padrão do código (`SYNC_FULL_DEFAULTS` — atualmente vazio, ninguém ligado)
 
 Ou seja: o que estiver no `.env` **sempre ganha** do padrão do código.
 

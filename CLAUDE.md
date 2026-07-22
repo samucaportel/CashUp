@@ -51,7 +51,7 @@ python run.py
 | `SYNC_BATCH_SIZE` | Registros por batch (padrão: 50) |
 | `SYNC_INTERVAL_MINUTES` | Intervalo global padrão do agendador em minutos (fallback; padrão: 30) |
 | `SYNC_INTERVAL_<ENTIDADE>` | (Opcional) Intervalo específico de uma entidade, ex: `SYNC_INTERVAL_ESTOQUE=5`. Sobrescreve a camada padrão |
-| `SYNC_FULL_<ENTIDADE>` | (Opcional) `true` força carga total da entidade a cada ciclo, ignorando o `ID_SINC`, ex: `SYNC_FULL_ESTOQUE=true`. Padrão de código: `estoque` |
+| `SYNC_FULL_<ENTIDADE>` | (Opcional) `true` força carga total da entidade a cada ciclo, ignorando o `ID_SINC`, ex: `SYNC_FULL_ESTOQUE=true`. Por padrão nenhuma entidade é full-sync |
 | `DEBUG_SAVE_PAYLOADS` | `true` para gravar JSONs enviados em `logs/payloads/` |
 | `LOG_LEVEL` | Nível de log (padrão: `INFO`) |
 
@@ -90,9 +90,9 @@ de até ~1/4 do intervalo (máx 120s) para desincronizar entidades de mesmo inte
 ## Fluxo de sincronização
 1. APScheduler chama `_run_sync(entity)` no intervalo da entidade (ver acima)
 2. Lê `ULTIMO_ID_SINC` da tabela `CASHUP_CONTROLE_SINC` (watermark). Entidades
-   full-sync (`settings.is_full_sync`, ex: `estoque`) ignoram o watermark e
-   carregam tudo a cada ciclo — a decisão é centralizada em
-   `BaseSyncService._resolve_ultimo_id()`
+   marcadas como full-sync via `SYNC_FULL_<ENTIDADE>` (`settings.is_full_sync`)
+   ignoram o watermark e carregam tudo a cada ciclo — a decisão é centralizada
+   em `BaseSyncService._resolve_ultimo_id()`
 3. Executa `SELECT * FROM VW_CASHUP_{ENTIDADE} WHERE ID_SINC > :ultimo_id`
 4. Transforma cada linha com `transform(row)`
 5. Envia em batches via `POST` para a API CashUp
